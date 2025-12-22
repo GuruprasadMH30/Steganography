@@ -1,8 +1,6 @@
 # Steganography
 A C-based project to hide secret data into image and decode that data
 
-# Steganography Project (C)
-
 ## Project Overview
 This project implements **image steganography** using the **C programming language**.
 Steganography is the technique of hiding secret information inside a file without
