@@ -20,12 +20,12 @@ uint get_image_size_for_bmp(FILE *fptr_image)
 
     // Read the width (an int)
     fread(&width, sizeof(int), 1, fptr_image);
-    printf("width = %u\n", width);
+    //printf("width = %u\n", width);
 
     // Read the height (an int)
     fread(&height, sizeof(int), 1, fptr_image);
-    printf("height = %u\n", height);
-
+    //printf("height = %u\n", height);
+    
     // Return image capacity
     return width * height * 3;
 }
@@ -34,7 +34,8 @@ uint get_file_size(FILE *fptr)
 {
     // Find the size of secret file data
     fseek(fptr,0,SEEK_END);
-    return (uint)ftell(fptr);
+    
+    return ftell(fptr);
 }
 
 /*
@@ -119,7 +120,7 @@ Status open_files(EncodeInfo *encInfo)
 
         return e_failure;
     }
-    printf("INFO: Opened beautiful.bmp\n");
+    //printf("INFO: Opened beautiful.bmp\n");
     // Secret file
     encInfo->fptr_secret = fopen(encInfo->secret_fname, "r");
     // Do Error handling
@@ -130,7 +131,7 @@ Status open_files(EncodeInfo *encInfo)
 
         return e_failure;
     }
-    printf("INFO: Opened secret.txt\n");
+    //printf("INFO: Opened secret.txt\n");
     // Stego Image file
     encInfo->fptr_stego_image = fopen(encInfo->stego_image_fname, "w");
     // Do Error handling
@@ -141,8 +142,7 @@ Status open_files(EncodeInfo *encInfo)
 
         return e_failure;
     }
-    printf("INFO: Opened %s\n", encInfo->stego_image_fname);
-    printf("INFO: Done\n");
+    
     // No failure return e_success
     return e_success;
 }
@@ -156,13 +156,15 @@ Status check_capacity(EncodeInfo *encInfo)
     encInfo->size_secret_file = get_file_size(encInfo->fptr_secret);
 
     //calculate required size
-    uint req_size = 4*8 + strlen(MAGIC_STRING)*8 + 4*8 + strlen(encInfo->extn_secret_file)*8 + 4*8 + strlen(encInfo->secret_data)*8;
+    uint req_size = 4*8 + strlen(MAGIC_STRING)*8 + 4*8 + strlen(encInfo->extn_secret_file)*8 + 4*8 + (encInfo->size_secret_file*8);
 
     //validate for required size and image capacity
     if(req_size < encInfo->image_capacity)
     {
+        
         return e_success;
     }
+   
     return e_failure;
 }
 
@@ -176,7 +178,6 @@ Status copy_bmp_header(FILE *fptr_src_image, FILE *fptr_dest_image)
     char buff[54];
     fread(buff, 1, 54, fptr_src_image);
     fwrite(buff, 1, 54, fptr_dest_image);
-
     //validate if pointer of destination image is 54 or not
     if(ftell(fptr_dest_image) != 54)
     {
@@ -270,6 +271,7 @@ Status encode_secret_file_size(long file_size, EncodeInfo *encInfo)
 Status encode_secret_file_data(EncodeInfo *encInfo)
 {
     //buffer to store 8 bytes
+    fseek(encInfo->fptr_secret, 0, SEEK_SET);
     char buff[8];
     for(int i=0; i<encInfo->size_secret_file; i++)
     {
@@ -277,7 +279,8 @@ Status encode_secret_file_data(EncodeInfo *encInfo)
         fread(buff, 1, 8, encInfo->fptr_src_image);
 
         //call encode byte to LSB
-        if(encode_byte_to_lsb(encInfo->secret_data[i], buff) == e_failure)
+        char ch = fgetc(encInfo->fptr_secret);
+        if(encode_byte_to_lsb(ch, buff) == e_failure)
         {
             return e_failure;
         }
@@ -297,7 +300,7 @@ Status copy_remaining_img_data(FILE *fptr_src, FILE *fptr_dest)
     {
         fputc(ch, fptr_dest);
     }
-    printf("%ld %ld\n",ftell(fptr_src),ftell(fptr_dest));
+
     return e_success;
 }
 
@@ -358,12 +361,12 @@ Status do_encoding(EncodeInfo *encInfo)
     }
 
     //store secret file data into structure
-    char ch;
-    int i=0;
-    while((ch = fgetc(encInfo->fptr_secret)) != EOF)
-    {
-        encInfo->secret_data[i++] = ch;
-    }
+    // char ch;
+    // int i=0;
+    // while((ch = fgetc(encInfo->fptr_secret)) != EOF)
+    // {
+    //     encInfo->secret_data[i++] = ch;
+    // }
 
     //call check capacity and validate
     if(check_capacity(encInfo) == e_failure)
@@ -371,14 +374,13 @@ Status do_encoding(EncodeInfo *encInfo)
         printf("Size of source image is lesser\n");
         return e_failure;
     }
-    
+    printf("INFO: Capacity checked successfully\n");
     //call copy_bmp_header and validate
     if(copy_bmp_header(encInfo->fptr_src_image, encInfo->fptr_stego_image) == e_failure)
     {
         printf("Header is not copied correctly\n");
         return e_failure;
     }
-
     //call encode_magic_string_size and validate
     if(encode_magic_string_size(strlen(MAGIC_STRING), encInfo) == e_failure)
     {
@@ -392,6 +394,7 @@ Status do_encoding(EncodeInfo *encInfo)
         printf("Unable to Encode of magic string\n");
         return e_failure;
     }
+    printf("INFO: Magic string encoded successfully\n");
 
     //call encode_secret_file_extension_size and validate
     if(encode_secret_file_extn_size(strlen(encInfo->extn_secret_file), encInfo) == e_failure)
@@ -399,6 +402,7 @@ Status do_encoding(EncodeInfo *encInfo)
         printf("Unable to encode size of secret file extension\n");
         return e_failure;
     }
+    printf("INFO: Size of secret file extension encoded successfully\n");
 
     //call encode_secret_file_extn and validate
     if(encode_secret_file_extn(encInfo->extn_secret_file, encInfo) == e_failure)
@@ -406,6 +410,7 @@ Status do_encoding(EncodeInfo *encInfo)
         printf("Unable to encode secret file extension\n");
         return e_failure;
     }
+    printf("INFO: Secret file extension encoded successfully\n");
 
     //call encode_secret_file_size and validate
     if(encode_secret_file_size(encInfo->size_secret_file, encInfo) == e_failure)
@@ -413,6 +418,7 @@ Status do_encoding(EncodeInfo *encInfo)
         printf("Unable to encode size of secret file\n");
         return e_failure;
     }
+    printf("INFO: Size of secret data encoded successfully\n");
 
     //call encode_secret_file_data and validate
     if(encode_secret_file_data(encInfo) == e_failure)
@@ -420,6 +426,7 @@ Status do_encoding(EncodeInfo *encInfo)
         printf("Unable to encode secret file\n");
         return e_failure;
     }
+    printf("INFO: Secret data encoded successfully\n");
     //call copy_remaining_img_data and validate
     if(copy_remaining_img_data(encInfo->fptr_src_image, encInfo->fptr_stego_image) == e_failure)
     {
@@ -427,5 +434,6 @@ Status do_encoding(EncodeInfo *encInfo)
         return e_failure;
     }
 
+    printf("\n---- Data Encoded successfully ----\n");
     return e_success;
 }
