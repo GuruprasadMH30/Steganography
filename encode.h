@@ -22,7 +22,6 @@ typedef struct _EncodeInfo
     char *secret_fname;       // To store the secret file name
     FILE *fptr_secret;        // To store the secret file address
     char extn_secret_file[5]; // To store the Secret file extension
-    char secret_data[100];    // To store the secret data
     long size_secret_file;    // To store the size of the secret data
 
     /* Stego Image Info */
