@@ -25,6 +25,12 @@ and can later be extracted securely.
 
 ---
 
+## Flow Explanation
+
+<img width="1920" height="1080" alt="STEGANOGRAPHY" src="https://github.com/user-attachments/assets/83308ebd-db1f-496a-bde4-113713e26266" />
+
+---
+
 ## Technologies Used
 - C Programming
 - File Handling
